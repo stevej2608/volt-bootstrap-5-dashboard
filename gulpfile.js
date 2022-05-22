@@ -29,6 +29,9 @@ var wait = require('gulp-wait');
 var sourcemaps = require('gulp-sourcemaps');
 var fileinclude = require('gulp-file-include');
 
+var rename = require("gulp-rename");
+const sassThemes = require('gulp-sass-themes');
+
 // Define paths
 
 const paths = {
@@ -145,9 +148,10 @@ gulp.task('beautify:css', function () {
 // Minify CSS
 gulp.task('minify:css', function () {
     return gulp.src([
-        paths.dist.css + '/volt.css'
+        paths.dist.css + '/*.css'
     ])
     .pipe(cleanCss())
+    .pipe(rename({ suffix: ".min" }))
     .pipe(gulp.dest(paths.dist.css))
 });
 
@@ -202,6 +206,21 @@ gulp.task('copy:dist:css', function () {
         }))
         .pipe(sourcemaps.write('.'))
         .pipe(gulp.dest(paths.dist.css))
+});
+
+
+// Compile and copy all scss/css themes
+gulp.task('copy:dist:css:themes', function () {
+  return gulp.src([paths.src.scss + '/volt/**/*.scss', paths.src.scss + '/custom/**/*.scss', paths.src.scss + '/themes/**/*.scss',paths.src.scss + '/volt.themed.scss'])
+      .pipe(wait(500))
+      .pipe(sourcemaps.init())
+      .pipe(sassThemes('themes/_*.scss', { cwd: paths.src.scss }))
+      .pipe(sass().on('error', sass.logError))
+      .pipe(autoprefixer({
+          overrideBrowserslist: ['> 1%']
+      }))
+      .pipe(sourcemaps.write('.'))
+      .pipe(gulp.dest(paths.dist.css))
 });
 
 gulp.task('copy:dev:css', function () {
@@ -290,6 +309,12 @@ gulp.task('copy:dev:vendor', function() {
 
 gulp.task('build:dev', gulp.series('clean:dev', 'copy:dev:css', 'copy:dev:html', 'copy:dev:html:index', 'copy:dev:assets', 'beautify:css', 'copy:dev:vendor'));
 gulp.task('build:dist', gulp.series('clean:dist', 'copy:dist:css', 'copy:dist:html', 'copy:dist:html:index', 'copy:dist:assets', 'minify:css', 'minify:html', 'minify:html:index', 'copy:dist:vendor'));
+
+gulp.task('build:dist:css', gulp.series('clean:dist', 'copy:dist:css', 'copy:dist:html', 'copy:dist:html:index', 'copy:dist:assets', 'minify:css', 'minify:html', 'minify:html:index', 'copy:dist:vendor'));
+
+
+gulp.task('build:css', gulp.series('clean:dist', 'copy:dist:css', 'minify:css'));
+gulp.task('build:css:themes', gulp.series('clean:dist', 'copy:dist:css', 'build:css', 'copy:dist:css:themes', 'minify:css'));
 
 // Default
 gulp.task('default', gulp.series('serve'));
